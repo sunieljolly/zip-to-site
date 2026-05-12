@@ -96,6 +96,26 @@ The easiest option is [Vercel](https://vercel.com):
 
 Alternatively deploy to [Cloudflare Pages](https://pages.cloudflare.com) using the Next.js preset.
 
+### Deploying to Coolify
+
+[Coolify](https://coolify.io) is a self-hosted PaaS alternative to Vercel.
+
+1. In your Coolify dashboard, create a new **Application** and connect your GitHub repository.
+2. Set the **Build Pack** to `Nixpacks` (or `Dockerfile` if you add one).
+3. Set the **Build Command** to:
+   ```bash
+   npm run build
+   ```
+4. Set the **Start Command** to:
+   ```bash
+   npm run start
+   ```
+5. Under **Environment Variables**, add all values from your `.env.local` file.
+6. Set the **Port** to `3000`.
+7. Click **Deploy**. Coolify will build and serve the app at your configured domain.
+
+> **Note:** If you use Coolify's built-in reverse proxy (Traefik), make sure the domain configured in Coolify matches `NEXT_PUBLIC_APP_URL` in your environment variables.
+
 ---
 
 ## Stripe Webhooks (optional)
