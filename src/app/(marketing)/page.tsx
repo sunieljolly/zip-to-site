@@ -79,6 +79,52 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Requirements */}
+      <section style={{ borderTop: "1px solid var(--border)" }}>
+        <div className="max-w-4xl mx-auto px-6 py-20">
+          <p className="text-xs font-semibold tracking-widest uppercase text-center mb-14" style={{ color: "var(--muted)" }}>
+            ZIP file requirements
+          </p>
+          <div className="grid sm:grid-cols-2 gap-8">
+            <div className="rounded-2xl border p-6 space-y-4" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+              <p className="text-sm font-semibold text-green-700">✓ What to include</p>
+              <ul className="space-y-2 text-sm" style={{ color: "var(--muted)" }}>
+                {[
+                  "An index.html at the root of the ZIP",
+                  "Static assets — CSS, JS, images, fonts",
+                  "Any subfolder structure your HTML links to",
+                  "Built/exported output (not source files)",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0 text-green-600">·</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-2xl border p-6 space-y-4" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+              <p className="text-sm font-semibold" style={{ color: "#C0392B" }}>✗ What not to include</p>
+              <ul className="space-y-2 text-sm" style={{ color: "var(--muted)" }}>
+                {[
+                  "node_modules or any package directories",
+                  "Server-side code (Node.js, Python, PHP…)",
+                  "Build tools or config files (vite.config, webpack…)",
+                  "Secrets, .env files, or API keys",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <span className="mt-0.5 shrink-0" style={{ color: "#C0392B" }}>·</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <p className="text-center text-sm mt-10" style={{ color: "var(--muted)" }}>
+            ZipToSite serves <strong>static files only</strong>. If your AI tool has a "Export" or "Download" button, use that output directly.
+          </p>
+        </div>
+      </section>
+
       {/* CTA strip */}
       <section style={{ borderTop: "1px solid var(--border)" }}>
         <div className="max-w-4xl mx-auto px-6 py-16 flex flex-col sm:flex-row items-center justify-between gap-6">

@@ -37,6 +37,14 @@ export default async function DashboardLayout({
         </div>
       </nav>
       <main className="max-w-4xl mx-auto px-6 py-10">{children}</main>
+      <footer style={{ borderTop: "1px solid var(--border)" }}>
+        <div
+          className="max-w-4xl mx-auto px-6 py-6 text-xs text-center"
+          style={{ color: "var(--muted-light)" }}
+        >
+          © {new Date().getFullYear()} ZipToSite
+        </div>
+      </footer>
     </div>
   );
 }
