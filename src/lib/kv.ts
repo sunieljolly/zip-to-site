@@ -34,3 +34,13 @@ export async function syncSiteToKV({
     )
   );
 }
+
+export async function deleteKVKey(key: string) {
+  const accountId = process.env.R2_ACCOUNT_ID!;
+  const namespaceId = process.env.CF_KV_NAMESPACE_ID!;
+  const apiToken = process.env.CF_API_TOKEN!;
+  await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}/storage/kv/namespaces/${namespaceId}/values/${encodeURIComponent(key)}`,
+    { method: "DELETE", headers: { Authorization: `Bearer ${apiToken}` } }
+  );
+}

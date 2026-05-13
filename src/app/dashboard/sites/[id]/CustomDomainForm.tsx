@@ -3,11 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 
 interface DnsRecords {
-  cname_target: string;
+  cname_target: string | null;
   txt_name: string | null;
   txt_value: string | null;
-  ssl_txt_name: string | null;
-  ssl_txt_value: string | null;
+  dcv_cname_name: string | null;
+  dcv_cname_target: string | null;
 }
 
 type DomainStatus = "none" | "pending" | "active" | "unknown";
@@ -34,6 +34,7 @@ export default function CustomDomainForm({
 }) {
   const [domain, setDomain] = useState(currentDomain ?? "");
   const [loading, setLoading] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dnsRecords, setDnsRecords] = useState<DnsRecords | null>(null);
   const [domainStatus, setDomainStatus] = useState<DomainStatus>("none");
@@ -45,9 +46,18 @@ export default function CustomDomainForm({
     const json = await res.json();
     setDomainStatus(json.status ?? "none");
     setSslStatus(json.ssl_status);
+    // Persist DNS records from every status response
+    if (json.cname_target || json.txt_name || json.dcv_cname_name) {
+      setDnsRecords({
+        cname_target: json.cname_target ?? null,
+        txt_name: json.txt_name ?? null,
+        txt_value: json.txt_value ?? null,
+        dcv_cname_name: json.dcv_cname_name ?? null,
+        dcv_cname_target: json.dcv_cname_target ?? null,
+      });
+    }
   }, [siteId]);
 
-  // Poll every 10s while pending
   useEffect(() => {
     if (currentDomain && hasHostname) checkStatus();
   }, [currentDomain, hasHostname, checkStatus]);
@@ -77,15 +87,33 @@ export default function CustomDomainForm({
     } else if (json.cname_target) {
       setDnsRecords({
         cname_target: json.cname_target,
-        txt_name: json.txt_name,
-        txt_value: json.txt_value,
-        ssl_txt_name: json.ssl_txt_name ?? null,
-        ssl_txt_value: json.ssl_txt_value ?? null,
+        txt_name: json.txt_name ?? null,
+        txt_value: json.txt_value ?? null,
+        dcv_cname_name: json.dcv_cname_name ?? null,
+        dcv_cname_target: json.dcv_cname_target ?? null,
       });
       setDomainStatus("pending");
     }
     setLoading(false);
   }
+
+  async function handleDisconnect() {
+    if (!confirm("Remove this custom domain? Your site will still be available at its subdomain.")) return;
+    setDisconnecting(true);
+    const res = await fetch(`/api/domains?siteId=${siteId}`, { method: "DELETE" });
+    if (res.ok) {
+      setDomain("");
+      setDnsRecords(null);
+      setDomainStatus("none");
+      setSslStatus(undefined);
+    } else {
+      alert("Failed to disconnect domain.");
+    }
+    setDisconnecting(false);
+  }
+
+  const isFullyActive = domainStatus === "active" && sslStatus === "active";
+  const hasDomain = domain.trim().length > 0 && (hasHostname || domainStatus !== "none");
 
   return (
     <div className="space-y-4">
@@ -102,54 +130,75 @@ export default function CustomDomainForm({
           {domainStatus !== "none" && <StatusBadge status={domainStatus} sslStatus={sslStatus} />}
         </div>
         {error && <p className="text-sm" style={{ color: "#C0392B" }}>{error}</p>}
-        <button
-          type="submit"
-          disabled={loading || !domain.trim()}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-80"
-          style={{ background: "var(--foreground)", color: "var(--card)" }}
-        >
-          {loading ? "Saving…" : "Save domain"}
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={loading || !domain.trim()}
+            className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-80"
+            style={{ background: "var(--foreground)", color: "var(--card)" }}
+          >
+            {loading ? "Saving…" : "Save domain"}
+          </button>
+          {hasDomain && (
+            <button
+              type="button"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="text-sm px-4 py-2 rounded-lg border transition-colors hover:bg-red-50 disabled:opacity-50"
+              style={{ borderColor: "#FECACA", color: "#C0392B" }}
+            >
+              {disconnecting ? "Removing…" : "Disconnect"}
+            </button>
+          )}
+        </div>
       </form>
 
-      {domainStatus === "active" && sslStatus === "active" && (
-        <p className="text-sm text-green-700 font-medium">Your custom domain is live! Visit <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="underline">{domain}</a></p>
+      {isFullyActive && (
+        <p className="text-sm text-green-700 font-medium">
+          Your custom domain is live! Visit{" "}
+          <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="underline">
+            {domain}
+          </a>
+        </p>
       )}
 
-      {dnsRecords && !(domainStatus === "active" && sslStatus === "active") && (
-        <div className="bg-gray-50 border rounded-lg p-4 space-y-4 text-sm">
-          <p className="font-semibold">Add these DNS records at your domain registrar:</p>
+      {dnsRecords && !isFullyActive && (
+        <div className="border rounded-xl p-4 space-y-4 text-sm" style={{ background: "var(--background)", borderColor: "var(--border)" }}>
+          <p className="font-semibold">Add these DNS records at your registrar:</p>
 
-          <div className="space-y-1">
-            <p className="text-xs text-gray-500 uppercase tracking-wide">1. CNAME record</p>
-            <div className="bg-white border rounded p-3 font-mono text-xs space-y-1 break-all">
-              <p><span className="text-gray-500">Name:</span> {domain}</p>
-              <p><span className="text-gray-500">Value:</span> {dnsRecords.cname_target}</p>
+          {dnsRecords.cname_target && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>1. CNAME — point your domain here</p>
+              <div className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                <p><span style={{ color: "var(--muted)" }}>Name:</span> {domain}</p>
+                <p><span style={{ color: "var(--muted)" }}>Value:</span> {dnsRecords.cname_target}</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {dnsRecords.txt_name && dnsRecords.txt_value && (
-            <div className="space-y-1">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">2. TXT record (ownership verification)</p>
-              <div className="bg-white border rounded p-3 font-mono text-xs space-y-1 break-all">
-                <p><span className="text-gray-500">Name:</span> {dnsRecords.txt_name}</p>
-                <p><span className="text-gray-500">Value:</span> {dnsRecords.txt_value}</p>
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>2. TXT — ownership verification</p>
+              <div className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                <p><span style={{ color: "var(--muted)" }}>Name:</span> {dnsRecords.txt_name}</p>
+                <p><span style={{ color: "var(--muted)" }}>Value:</span> {dnsRecords.txt_value}</p>
               </div>
             </div>
           )}
 
-          {dnsRecords.ssl_txt_name && dnsRecords.ssl_txt_value &&
-            dnsRecords.ssl_txt_name !== dnsRecords.txt_name && (
-            <div className="space-y-1">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">3. TXT record (SSL validation)</p>
-              <div className="bg-white border rounded p-3 font-mono text-xs space-y-1 break-all">
-                <p><span className="text-gray-500">Name:</span> {dnsRecords.ssl_txt_name}</p>
-                <p><span className="text-gray-500">Value:</span> {dnsRecords.ssl_txt_value}</p>
+          {dnsRecords.dcv_cname_name && dnsRecords.dcv_cname_target && (
+            <div className="space-y-1.5">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+                {dnsRecords.txt_name ? "3." : "2."} CNAME — SSL certificate validation (DCV)
+              </p>
+              <div className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                <p><span style={{ color: "var(--muted)" }}>Name:</span> {dnsRecords.dcv_cname_name}</p>
+                <p><span style={{ color: "var(--muted)" }}>Value:</span> {dnsRecords.dcv_cname_target}</p>
               </div>
             </div>
           )}
 
-          <p className="text-xs text-gray-500">Status checks automatically every 10 seconds.</p>
+          <p className="text-xs" style={{ color: "var(--muted-light)" }}>Status checks automatically every 10 seconds.</p>
         </div>
       )}
     </div>

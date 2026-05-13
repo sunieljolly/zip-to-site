@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
-import { syncSiteToKV } from "@/lib/kv";
+import { syncSiteToKV, deleteKVKey } from "@/lib/kv";
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -38,8 +38,8 @@ export async function POST(req: NextRequest) {
   let cnameTarget: string | null = null;
   let txtName: string | null = null;
   let txtValue: string | null = null;
-  let sslTxtName: string | null = null;
-  let sslTxtValue: string | null = null;
+  let dcvCnameName: string | null = null;
+  let dcvCnameTarget: string | null = null;
 
   const zoneId = process.env.CF_ZONE_ID;
   const apiToken = process.env.CF_API_TOKEN;
@@ -77,9 +77,7 @@ export async function POST(req: NextRequest) {
         ownership_verification?: { name: string; value: string };
         ssl?: {
           status: string;
-          txt_name?: string;
-          txt_value?: string;
-          validation_records?: Array<{ txt_name: string; txt_value: string; status: string }>;
+          dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
         };
       };
     };
@@ -89,12 +87,8 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
-      sslTxtName = cfData.result.ssl?.txt_name
-        ?? cfData.result.ssl?.validation_records?.[0]?.txt_name
-        ?? null;
-      sslTxtValue = cfData.result.ssl?.txt_value
-        ?? cfData.result.ssl?.validation_records?.[0]?.txt_value
-        ?? null;
+      dcvCnameName = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname ?? null;
+      dcvCnameTarget = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname_target ?? null;
     } else {
       console.error("CF custom hostname error:", JSON.stringify(cfData.errors));
       return NextResponse.json({ error: `Cloudflare error: ${cfData.errors?.[0]?.message ?? "unknown"}` }, { status: 500 });
@@ -120,7 +114,51 @@ export async function POST(req: NextRequest) {
     cname_target: cnameTarget,
     txt_name: txtName,
     txt_value: txtValue,
-    ssl_txt_name: sslTxtName,
-    ssl_txt_value: sslTxtValue,
+    dcv_cname_name: dcvCnameName,
+    dcv_cname_target: dcvCnameTarget,
   });
+}
+
+export async function DELETE(req: NextRequest) {
+  const supabase = await createServerSupabaseClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const siteId = req.nextUrl.searchParams.get("siteId");
+  if (!siteId) return NextResponse.json({ error: "Missing siteId" }, { status: 400 });
+
+  const { data: site } = await supabase
+    .from("sites")
+    .select("id, subdomain, r2_path, custom_domain, custom_hostname_id")
+    .eq("id", siteId)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!site) return NextResponse.json({ error: "Site not found." }, { status: 404 });
+
+  const zoneId = process.env.CF_ZONE_ID;
+  const apiToken = process.env.CF_API_TOKEN;
+
+  if (zoneId && apiToken && site.custom_hostname_id) {
+    await fetch(
+      `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${site.custom_hostname_id}`,
+      { method: "DELETE", headers: { Authorization: `Bearer ${apiToken}` } }
+    );
+  }
+
+  if (site.custom_domain) {
+    await deleteKVKey(`custom:${site.custom_domain}`);
+  }
+
+  const { error } = await supabase
+    .from("sites")
+    .update({ custom_domain: null, custom_hostname_id: null })
+    .eq("id", siteId)
+    .eq("user_id", user.id);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
 }

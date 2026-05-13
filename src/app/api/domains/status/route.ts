@@ -34,13 +34,30 @@ export async function GET(req: NextRequest) {
 
   const cfData = await cfRes.json() as {
     success: boolean;
-    result?: { status: string; ssl?: { status: string } };
+    result?: {
+      status: string;
+      ownership_verification?: { name: string; value: string };
+      ssl?: {
+        status: string;
+        dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
+      };
+    };
   };
 
   if (!cfData.success || !cfData.result) return NextResponse.json({ status: "unknown" });
 
-  const hostnameStatus = cfData.result.status; // pending, active, deleted, etc.
-  const sslStatus = cfData.result.ssl?.status; // pending_validation, pending_issuance, active, etc.
+  const hostnameStatus = cfData.result.status;
+  const sslStatus = cfData.result.ssl?.status;
+  const fallbackOrigin = process.env.NEXT_PUBLIC_FALLBACK_ORIGIN ?? null;
 
-  return NextResponse.json({ status: hostnameStatus, ssl_status: sslStatus });
+  return NextResponse.json({
+    status: hostnameStatus,
+    ssl_status: sslStatus,
+    // DNS records returned on every poll so the UI can persist them
+    cname_target: fallbackOrigin,
+    txt_name: cfData.result.ownership_verification?.name ?? null,
+    txt_value: cfData.result.ownership_verification?.value ?? null,
+    dcv_cname_name: cfData.result.ssl?.dcv_delegation_records?.[0]?.cname ?? null,
+    dcv_cname_target: cfData.result.ssl?.dcv_delegation_records?.[0]?.cname_target ?? null,
+  });
 }
