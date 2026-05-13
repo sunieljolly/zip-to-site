@@ -40,7 +40,6 @@ export async function GET(req: NextRequest) {
       ssl?: {
         status: string;
         validation_records?: Array<{ txt_name: string; txt_value: string }>;
-        dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
       };
     };
   };
@@ -52,14 +51,10 @@ export async function GET(req: NextRequest) {
   const fallbackOrigin = process.env.NEXT_PUBLIC_FALLBACK_ORIGIN ?? null;
   const ssl = cfData.result.ssl;
 
-  // Use DCV delegation CNAME if present, otherwise fall back to TXT validation_records
-  const dcvCnameName = ssl?.dcv_delegation_records?.[0]?.cname
-    ?? ssl?.validation_records?.[0]?.txt_name
-    ?? null;
-  const dcvCnameTarget = ssl?.dcv_delegation_records?.[0]?.cname_target
-    ?? ssl?.validation_records?.[0]?.txt_value
-    ?? null;
-  const isDcvCname = !!(ssl?.dcv_delegation_records?.[0]);
+  const sslValidationRecords = (ssl?.validation_records ?? []).map((r) => ({
+    name: r.txt_name,
+    value: r.txt_value,
+  }));
 
   return NextResponse.json({
     status: hostnameStatus,
@@ -67,8 +62,6 @@ export async function GET(req: NextRequest) {
     cname_target: fallbackOrigin,
     txt_name: cfData.result.ownership_verification?.name ?? null,
     txt_value: cfData.result.ownership_verification?.value ?? null,
-    dcv_cname_name: dcvCnameName,
-    dcv_cname_target: dcvCnameTarget,
-    dcv_is_cname: isDcvCname,
+    ssl_validation_records: sslValidationRecords,
   });
 }

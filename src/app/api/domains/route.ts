@@ -38,8 +38,7 @@ export async function POST(req: NextRequest) {
   let cnameTarget: string | null = null;
   let txtName: string | null = null;
   let txtValue: string | null = null;
-  let dcvCnameName: string | null = null;
-  let dcvCnameTarget: string | null = null;
+  let sslValidationRecords: Array<{ name: string; value: string }> = [];
 
   const zoneId = process.env.CF_ZONE_ID;
   const apiToken = process.env.CF_API_TOKEN;
@@ -97,13 +96,11 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
-      // Prefer DCV delegation CNAME; fall back to validation_records TXT
-      dcvCnameName = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname
-        ?? cfData.result.ssl?.validation_records?.[0]?.txt_name
-        ?? null;
-      dcvCnameTarget = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname_target
-        ?? cfData.result.ssl?.validation_records?.[0]?.txt_value
-        ?? null;
+      // All TXT records needed for SSL certificate issuance
+      sslValidationRecords = (cfData.result.ssl?.validation_records ?? []).map((r) => ({
+        name: r.txt_name,
+        value: r.txt_value,
+      }));
     } else {
       const firstError = cfData.errors?.[0];
       const msg = firstError ? `${firstError.message} (code ${firstError.code})` : `HTTP ${cfRes.status}`;
@@ -131,8 +128,7 @@ export async function POST(req: NextRequest) {
     cname_target: cnameTarget,
     txt_name: txtName,
     txt_value: txtValue,
-    dcv_cname_name: dcvCnameName,
-    dcv_cname_target: dcvCnameTarget,
+    ssl_validation_records: sslValidationRecords,
   });
 }
 

@@ -6,9 +6,7 @@ interface DnsRecords {
   cname_target: string | null;
   txt_name: string | null;
   txt_value: string | null;
-  dcv_cname_name: string | null;
-  dcv_cname_target: string | null;
-  dcv_is_cname: boolean;
+  ssl_validation_records: Array<{ name: string; value: string }>;
 }
 
 type DomainStatus = "none" | "pending" | "active" | "unknown";
@@ -48,14 +46,12 @@ export default function CustomDomainForm({
     setDomainStatus(json.status ?? "none");
     setSslStatus(json.ssl_status);
     // Persist DNS records from every status response
-    if (json.cname_target || json.txt_name || json.dcv_cname_name) {
+    if (json.cname_target || json.txt_name || json.ssl_validation_records?.length) {
       setDnsRecords({
         cname_target: json.cname_target ?? null,
         txt_name: json.txt_name ?? null,
         txt_value: json.txt_value ?? null,
-        dcv_cname_name: json.dcv_cname_name ?? null,
-        dcv_cname_target: json.dcv_cname_target ?? null,
-        dcv_is_cname: json.dcv_is_cname ?? false,
+        ssl_validation_records: json.ssl_validation_records ?? [],
       });
     }
   }, [siteId]);
@@ -91,9 +87,7 @@ export default function CustomDomainForm({
         cname_target: json.cname_target,
         txt_name: json.txt_name ?? null,
         txt_value: json.txt_value ?? null,
-        dcv_cname_name: json.dcv_cname_name ?? null,
-        dcv_cname_target: json.dcv_cname_target ?? null,
-        dcv_is_cname: json.dcv_is_cname ?? false,
+        ssl_validation_records: json.ssl_validation_records ?? [],
       });
       setDomainStatus("pending");
     }
@@ -200,14 +194,16 @@ export default function CustomDomainForm({
 
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-              {dnsRecords.txt_name ? "3." : "2."}{" "}
-              {dnsRecords.dcv_is_cname ? "CNAME — SSL certificate validation (DCV delegation)" : "TXT — SSL certificate validation"}
+              {dnsRecords.txt_name ? "3." : "2."} TXT — SSL certificate validation
             </p>
-            {dnsRecords.dcv_cname_name && dnsRecords.dcv_cname_target ? (
-              <div className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-                <p><span style={{ color: "var(--muted)" }}>Type:</span> {dnsRecords.dcv_is_cname ? "CNAME" : "TXT"}</p>
-                <p><span style={{ color: "var(--muted)" }}>Name:</span> {dnsRecords.dcv_cname_name}</p>
-                <p><span style={{ color: "var(--muted)" }}>Value:</span> {dnsRecords.dcv_cname_target}</p>
+            {dnsRecords.ssl_validation_records.length > 0 ? (
+              <div className="space-y-2">
+                {dnsRecords.ssl_validation_records.map((rec, i) => (
+                  <div key={i} className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                    <p><span style={{ color: "var(--muted)" }}>Name:</span> {rec.name}</p>
+                    <p><span style={{ color: "var(--muted)" }}>Value:</span> {rec.value}</p>
+                  </div>
+                ))}
               </div>
             ) : (
               <div className="rounded-lg border p-3 text-xs flex items-center gap-2" style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--muted)" }}>
