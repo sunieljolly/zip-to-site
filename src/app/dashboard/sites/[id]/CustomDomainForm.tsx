@@ -199,19 +199,30 @@ export default function CustomDomainForm({
                 <span className="normal-case ml-1 font-normal">(add all {dnsRecords.ssl_validation_records.length})</span>
               )}
             </p>
-            {dnsRecords.ssl_validation_records.length > 0 ? (
-              <div className="space-y-2">
-                {dnsRecords.ssl_validation_records.map((rec, i) => (
-                  <div key={i} className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-                    {dnsRecords.ssl_validation_records.length > 1 && (
-                      <p className="text-xs font-semibold not-italic" style={{ color: "var(--muted)", fontFamily: "inherit" }}>Record {i + 1} of {dnsRecords.ssl_validation_records.length}</p>
-                    )}
-                    <p><span style={{ color: "var(--muted)" }}>Name:</span> {rec.name}</p>
-                    <p><span style={{ color: "var(--muted)" }}>Value:</span> {rec.value}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
+            {dnsRecords.ssl_validation_records.length > 0 ? (() => {
+              // Group records by name — same name can have multiple values
+              const grouped = dnsRecords.ssl_validation_records.reduce<Record<string, string[]>>(
+                (acc, rec) => { (acc[rec.name] ??= []).push(rec.value); return acc; },
+                {}
+              );
+              return (
+                <div className="space-y-2">
+                  {Object.entries(grouped).map(([name, values]) => (
+                    <div key={name} className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                      <p><span style={{ color: "var(--muted)" }}>Name:</span> {name}</p>
+                      {values.map((v, i) => (
+                        <p key={i}><span style={{ color: "var(--muted)" }}>Value{values.length > 1 ? ` ${i + 1}` : ""}:</span> {v}</p>
+                      ))}
+                      {values.length > 1 && (
+                        <p className="pt-1 not-italic" style={{ color: "var(--muted-light)", fontFamily: "inherit", fontSize: "0.65rem" }}>
+                          Add {values.length} separate TXT records with this name, one per value.
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })() : (
               <div className="rounded-lg border p-3 text-xs flex items-center gap-2" style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--muted)" }}>
                 <svg className="animate-spin shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
