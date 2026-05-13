@@ -64,12 +64,12 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           hostname: domain,
-          ssl: { method: "txt", type: "dv", settings: { min_tls_version: "1.2" } },
+          ssl: { method: "dcv_delegation", type: "dv", settings: { min_tls_version: "1.2" } },
         }),
       }
     );
 
-    const cfData = await cfRes.json() as {
+    let cfData: {
       success: boolean;
       errors?: { code: number; message: string }[];
       result?: {
@@ -77,13 +77,20 @@ export async function POST(req: NextRequest) {
         ownership_verification?: { name: string; value: string };
         ssl?: {
           status: string;
-          // TXT-based DCV (method: "txt")
           validation_records?: Array<{ txt_name: string; txt_value: string }>;
-          // CNAME-based DCV delegation
           dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
         };
       };
     };
+
+    try {
+      cfData = await cfRes.json();
+    } catch {
+      console.error("CF non-JSON response, status:", cfRes.status);
+      return NextResponse.json({ error: `Cloudflare returned an unexpected response (HTTP ${cfRes.status}).` }, { status: 500 });
+    }
+
+    console.log("CF custom hostname response:", cfRes.status, JSON.stringify(cfData));
 
     if (cfData.success && cfData.result) {
       hostnameId = cfData.result.id;
@@ -98,8 +105,10 @@ export async function POST(req: NextRequest) {
         ?? cfData.result.ssl?.validation_records?.[0]?.txt_value
         ?? null;
     } else {
-      console.error("CF custom hostname error:", JSON.stringify(cfData.errors));
-      return NextResponse.json({ error: `Cloudflare error: ${cfData.errors?.[0]?.message ?? "unknown"}` }, { status: 500 });
+      const firstError = cfData.errors?.[0];
+      const msg = firstError ? `${firstError.message} (code ${firstError.code})` : `HTTP ${cfRes.status}`;
+      console.error("CF custom hostname error:", JSON.stringify(cfData));
+      return NextResponse.json({ error: `Cloudflare error: ${msg}` }, { status: 500 });
     }
   }
 
