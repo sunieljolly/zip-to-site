@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
 
     const cfData = await cfRes.json() as {
       success: boolean;
+      errors?: { code: number; message: string }[];
       result?: {
         id: string;
         ownership_verification?: { name: string; value: string };
@@ -80,6 +81,9 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
+    } else {
+      console.error("CF custom hostname error:", JSON.stringify(cfData.errors));
+      return NextResponse.json({ error: `Cloudflare error: ${cfData.errors?.[0]?.message ?? "unknown"}` }, { status: 500 });
     }
   }
 
