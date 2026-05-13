@@ -25,7 +25,8 @@ export default function CustomDomainForm({
     });
 
     const json = await res.json();
-    setMessage(res.ok ? "Domain saved! Point your DNS CNAME to workers.dev." : json.error ?? "Failed.");
+    const workerHost = process.env.NEXT_PUBLIC_WORKER_HOST ?? "your-worker.workers.dev";
+    setMessage(res.ok ? `Domain saved! Add a CNAME DNS record pointing to: ${workerHost}` : json.error ?? "Failed.");
     setLoading(false);
   }
 

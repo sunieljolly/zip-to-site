@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import { syncSiteToKV } from "@/lib/kv";
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   // Confirm site belongs to user
   const { data: site } = await supabase
     .from("sites")
-    .select("id")
+    .select("id, subdomain, r2_path")
     .eq("id", siteId)
     .eq("user_id", user.id)
     .single();
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
     .eq("user_id", user.id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await syncSiteToKV({
+    subdomain: site.subdomain,
+    customDomain: domain,
+    r2Path: site.r2_path,
+  });
 
   return NextResponse.json({ success: true });
 }
