@@ -195,11 +195,17 @@ export default function CustomDomainForm({
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
               {dnsRecords.txt_name ? "3." : "2."} TXT — SSL certificate validation
+              {dnsRecords.ssl_validation_records.length > 1 && (
+                <span className="normal-case ml-1 font-normal">(add all {dnsRecords.ssl_validation_records.length})</span>
+              )}
             </p>
             {dnsRecords.ssl_validation_records.length > 0 ? (
               <div className="space-y-2">
                 {dnsRecords.ssl_validation_records.map((rec, i) => (
                   <div key={i} className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                    {dnsRecords.ssl_validation_records.length > 1 && (
+                      <p className="text-xs font-semibold not-italic" style={{ color: "var(--muted)", fontFamily: "inherit" }}>Record {i + 1} of {dnsRecords.ssl_validation_records.length}</p>
+                    )}
                     <p><span style={{ color: "var(--muted)" }}>Name:</span> {rec.name}</p>
                     <p><span style={{ color: "var(--muted)" }}>Value:</span> {rec.value}</p>
                   </div>
