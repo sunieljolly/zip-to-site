@@ -11,11 +11,12 @@ interface DnsRecords {
 type DomainStatus = "none" | "pending" | "active" | "unknown";
 
 function StatusBadge({ status, sslStatus }: { status: DomainStatus; sslStatus?: string }) {
-  if (status === "active") {
+  if (status === "active" && sslStatus === "active") {
     return <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">✓ Active</span>;
   }
-  if (status === "pending") {
-    return <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5">⏳ {sslStatus === "pending_validation" ? "Awaiting DNS verification" : "Provisioning SSL…"}</span>;
+  if (status === "active" || status === "pending") {
+    const label = sslStatus === "pending_validation" ? "Awaiting DNS verification" : "Provisioning SSL…";
+    return <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5">⏳ {label}</span>;
   }
   return null;
 }
@@ -101,11 +102,11 @@ export default function CustomDomainForm({
         </button>
       </form>
 
-      {domainStatus === "active" && (
+      {domainStatus === "active" && sslStatus === "active" && (
         <p className="text-sm text-green-700 font-medium">Your custom domain is live! Visit <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="underline">{domain}</a></p>
       )}
 
-      {dnsRecords && domainStatus !== "active" && (
+      {dnsRecords && !(domainStatus === "active" && sslStatus === "active") && (
         <div className="bg-gray-50 border rounded-lg p-4 space-y-4 text-sm">
           <p className="font-semibold">Add these DNS records at your domain registrar:</p>
 
