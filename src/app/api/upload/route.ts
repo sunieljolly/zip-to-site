@@ -11,6 +11,12 @@ import path from "path";
 
 const BLOCKED_EXTENSIONS = new Set([".php", ".exe", ".sh", ".py", ".rb", ".pl", ".cgi"]);
 const MAX_ZIP_SIZE = 50 * 1024 * 1024; // 50 MB
+const ANON_TTL_SECONDS = 600; // 10 minutes
+
+function generateAnonSubdomain(): string {
+  // ~20 random hex chars prefixed with "tmp" → e.g. tmp3a9f2c1d8b047e56a1
+  return "tmp" + crypto.randomBytes(10).toString("hex");
+}
 
 export async function POST(req: NextRequest) {
   const supabase = await createServerSupabaseClient();
@@ -18,16 +24,11 @@ export async function POST(req: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
-  const name = (formData.get("name") as string | null)?.trim();
 
-  if (!file || !name) {
-    return NextResponse.json({ error: "Missing file or name." }, { status: 400 });
+  if (!file) {
+    return NextResponse.json({ error: "Missing file." }, { status: 400 });
   }
 
   if (!file.name.endsWith(".zip")) {
@@ -38,25 +39,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "ZIP file exceeds 50 MB limit." }, { status: 400 });
   }
 
-  // Sanitize site name → subdomain slug
-  const subdomain = name.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "");
-  if (!subdomain) {
-    return NextResponse.json({ error: "Invalid site name." }, { status: 400 });
-  }
+  const isAnonymous = !user;
 
-  // Check subdomain uniqueness
-  const { data: existing } = await supabase
-    .from("sites")
-    .select("id")
-    .eq("subdomain", subdomain)
-    .maybeSingle();
+  let subdomain: string;
+  let name: string;
 
-  if (existing) {
-    return NextResponse.json({ error: "Subdomain already taken." }, { status: 409 });
+  if (isAnonymous) {
+    subdomain = generateAnonSubdomain();
+    name = subdomain;
+  } else {
+    const rawName = (formData.get("name") as string | null)?.trim();
+    if (!rawName) {
+      return NextResponse.json({ error: "Missing site name." }, { status: 400 });
+    }
+    name = rawName;
+    subdomain = name.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/^-+|-+$/g, "");
+    if (!subdomain) {
+      return NextResponse.json({ error: "Invalid site name." }, { status: 400 });
+    }
+
+    // Check subdomain uniqueness for authenticated users
+    const { data: existing } = await supabase
+      .from("sites")
+      .select("id")
+      .eq("subdomain", subdomain)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: "Subdomain already taken." }, { status: 409 });
+    }
   }
 
   const siteId = crypto.randomUUID();
-  const r2Prefix = `sites/${user.id}/${siteId}`;
+  const r2Prefix = isAnonymous ? `sites/anon/${siteId}` : `sites/${user!.id}/${siteId}`;
 
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
@@ -127,27 +142,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "ZIP must contain an index.html file." }, { status: 400 });
   }
 
-  const { error: dbError } = await supabase.from("sites").insert({
-    id: siteId,
-    user_id: user.id,
-    name,
-    subdomain,
-    r2_path: r2Prefix,
-  });
+  // For authenticated users, persist the site to the database
+  if (!isAnonymous) {
+    const { error: dbError } = await supabase.from("sites").insert({
+      id: siteId,
+      user_id: user!.id,
+      name,
+      subdomain,
+      r2_path: r2Prefix,
+    });
 
-  if (dbError) {
-    return NextResponse.json({ error: "Failed to save site record." }, { status: 500 });
+    if (dbError) {
+      return NextResponse.json({ error: "Failed to save site record." }, { status: 500 });
+    }
   }
 
-  // Sync to Cloudflare KV so the Worker can serve this site
+  // Sync to Cloudflare KV so the Worker can serve this site.
+  // Anonymous sites get a 10-minute TTL; authenticated sites are permanent.
   try {
-    await syncSiteToKV({ subdomain, r2Path: r2Prefix });
+    await syncSiteToKV({
+      subdomain,
+      r2Path: r2Prefix,
+      ...(isAnonymous ? { ttlSeconds: ANON_TTL_SECONDS } : {}),
+    });
   } catch {
-    // Non-fatal — site is saved, KV can be synced manually
+    // Non-fatal — site is saved (if authenticated), KV can be synced manually
     console.error("KV sync failed for", subdomain);
   }
 
   const siteUrl = `https://${subdomain}.${process.env.NEXT_PUBLIC_SITE_DOMAIN}`;
+
+  if (isAnonymous) {
+    const expiresAt = new Date(Date.now() + ANON_TTL_SECONDS * 1000).toISOString();
+    return NextResponse.json({ url: siteUrl, expiresAt, anonymous: true });
+  }
 
   return NextResponse.json({ siteId, url: siteUrl });
 }

@@ -6,10 +6,13 @@ export async function syncSiteToKV({
   subdomain,
   customDomain,
   r2Path,
+  ttlSeconds,
 }: {
   subdomain: string;
   customDomain?: string | null;
   r2Path: string;
+  /** If set, the KV entry will expire after this many seconds. */
+  ttlSeconds?: number;
 }) {
   const accountId = process.env.R2_ACCOUNT_ID!;
   const namespaceId = process.env.CF_KV_NAMESPACE_ID!;
@@ -21,9 +24,11 @@ export async function syncSiteToKV({
   const keys = [subdomain];
   if (customDomain) keys.push(`custom:${customDomain}`);
 
+  const ttlQuery = ttlSeconds ? `?expiration_ttl=${ttlSeconds}` : "";
+
   await Promise.all(
     keys.map((key) =>
-      fetch(`${baseUrl}/${encodeURIComponent(key)}`, {
+      fetch(`${baseUrl}/${encodeURIComponent(key)}${ttlQuery}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${apiToken}`,

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createServerSupabaseClient } from "@/lib/supabase-server";
+import AnonUploadWidget from "./AnonUploadWidget";
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
@@ -11,28 +12,35 @@ export default async function Home() {
 
   return (
     <>
-      {/* Hero */}
-      <section className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <p
-          className="text-xs font-semibold tracking-widest uppercase mb-5"
-          style={{ color: "var(--muted)" }}
-        >
-          Zero config. Instant deploy.
-        </p>
-        <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight mb-6">
-          Share your AI&#8209;generated<br />websites with the world
-        </h1>
-        <p className="text-lg max-w-xl mx-auto mb-10" style={{ color: "var(--muted)" }}>
-          Upload a ZIP file exported from any AI tool — v0, Bolt, Lovable, Cursor — and get
-          a live URL in seconds. No servers, no pipelines.
-        </p>
-        <Link
-          href="/signup"
-          className="inline-block text-sm font-semibold rounded-lg px-6 py-3 transition-opacity hover:opacity-80"
-          style={{ background: "var(--foreground)", color: "var(--card)" }}
-        >
-          Deploy your first site →
-        </Link>
+      {/* Hero + Upload */}
+      <section className="max-w-4xl mx-auto px-6 pt-20 pb-16">
+        <div className="text-center mb-10">
+          <p
+            className="text-xs font-semibold tracking-widest uppercase mb-5"
+            style={{ color: "var(--muted)" }}
+          >
+            Zero config. Instant deploy.
+          </p>
+          <h1 className="text-4xl sm:text-5xl font-bold leading-tight tracking-tight mb-6">
+            Share your AI&#8209;generated<br />websites with the world
+          </h1>
+          <p className="text-lg max-w-xl mx-auto mb-4" style={{ color: "var(--muted)" }}>
+            Upload a ZIP file exported from any AI tool — v0, Bolt, Lovable, Cursor — and get
+            a live URL in seconds. No servers, no pipelines.
+          </p>
+          <p className="text-sm" style={{ color: "var(--muted)" }}>
+            No account needed to try it.{" "}
+            <Link href="/signup" className="underline hover:no-underline font-medium" style={{ color: "var(--foreground)" }}>
+              Sign up
+            </Link>{" "}
+            to keep your site permanently.
+          </p>
+        </div>
+
+        {/* Upload widget — main focal point */}
+        <div className="max-w-lg mx-auto">
+          <AnonUploadWidget />
+        </div>
       </section>
 
       {/* How it works */}
@@ -54,12 +62,12 @@ export default async function Home() {
               {
                 step: "2",
                 title: "Upload the ZIP",
-                body: "Drag and drop your ZIP into the dashboard. We unpack it and push it to our global CDN instantly.",
+                body: "Drag and drop your ZIP on this page. We unpack it and push it to our global CDN instantly.",
               },
               {
                 step: "3",
                 title: "Share your URL",
-                body: "Your site is live at a subdomain instantly. Optionally connect your own domain with one DNS record.",
+                body: "Your site is live at a subdomain instantly. Sign up to keep it permanently and optionally connect your own domain.",
               },
             ].map(({ step, title, body }) => (
               <div key={step}>
