@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
   let cnameTarget: string | null = null;
   let txtName: string | null = null;
   let txtValue: string | null = null;
+  let sslTxtName: string | null = null;
+  let sslTxtValue: string | null = null;
 
   const zoneId = process.env.CF_ZONE_ID;
   const apiToken = process.env.CF_API_TOKEN;
@@ -73,6 +75,12 @@ export async function POST(req: NextRequest) {
       result?: {
         id: string;
         ownership_verification?: { name: string; value: string };
+        ssl?: {
+          status: string;
+          txt_name?: string;
+          txt_value?: string;
+          validation_records?: Array<{ txt_name: string; txt_value: string; status: string }>;
+        };
       };
     };
 
@@ -81,6 +89,12 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
+      sslTxtName = cfData.result.ssl?.txt_name
+        ?? cfData.result.ssl?.validation_records?.[0]?.txt_name
+        ?? null;
+      sslTxtValue = cfData.result.ssl?.txt_value
+        ?? cfData.result.ssl?.validation_records?.[0]?.txt_value
+        ?? null;
     } else {
       console.error("CF custom hostname error:", JSON.stringify(cfData.errors));
       return NextResponse.json({ error: `Cloudflare error: ${cfData.errors?.[0]?.message ?? "unknown"}` }, { status: 500 });
@@ -101,5 +115,12 @@ export async function POST(req: NextRequest) {
     r2Path: site.r2_path,
   });
 
-  return NextResponse.json({ success: true, cname_target: cnameTarget, txt_name: txtName, txt_value: txtValue });
+  return NextResponse.json({
+    success: true,
+    cname_target: cnameTarget,
+    txt_name: txtName,
+    txt_value: txtValue,
+    ssl_txt_name: sslTxtName,
+    ssl_txt_value: sslTxtValue,
+  });
 }

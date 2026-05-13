@@ -6,6 +6,8 @@ interface DnsRecords {
   cname_target: string;
   txt_name: string | null;
   txt_value: string | null;
+  ssl_txt_name: string | null;
+  ssl_txt_value: string | null;
 }
 
 type DomainStatus = "none" | "pending" | "active" | "unknown";
@@ -73,7 +75,13 @@ export default function CustomDomainForm({
     if (!res.ok) {
       setError(json.error ?? "Failed to save domain.");
     } else if (json.cname_target) {
-      setDnsRecords({ cname_target: json.cname_target, txt_name: json.txt_name, txt_value: json.txt_value });
+      setDnsRecords({
+        cname_target: json.cname_target,
+        txt_name: json.txt_name,
+        txt_value: json.txt_value,
+        ssl_txt_name: json.ssl_txt_name ?? null,
+        ssl_txt_value: json.ssl_txt_value ?? null,
+      });
       setDomainStatus("pending");
     }
     setLoading(false);
@@ -126,6 +134,17 @@ export default function CustomDomainForm({
               <div className="bg-white border rounded p-3 font-mono text-xs space-y-1 break-all">
                 <p><span className="text-gray-500">Name:</span> {dnsRecords.txt_name}</p>
                 <p><span className="text-gray-500">Value:</span> {dnsRecords.txt_value}</p>
+              </div>
+            </div>
+          )}
+
+          {dnsRecords.ssl_txt_name && dnsRecords.ssl_txt_value &&
+            dnsRecords.ssl_txt_name !== dnsRecords.txt_name && (
+            <div className="space-y-1">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">3. TXT record (SSL validation)</p>
+              <div className="bg-white border rounded p-3 font-mono text-xs space-y-1 break-all">
+                <p><span className="text-gray-500">Name:</span> {dnsRecords.ssl_txt_name}</p>
+                <p><span className="text-gray-500">Value:</span> {dnsRecords.ssl_txt_value}</p>
               </div>
             </div>
           )}
