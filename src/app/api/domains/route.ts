@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           hostname: domain,
-          ssl: { method: "cname", type: "dv", settings: { min_tls_version: "1.2" } },
+          ssl: { method: "txt", type: "dv", settings: { min_tls_version: "1.2" } },
         }),
       }
     );
