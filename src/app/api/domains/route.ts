@@ -77,6 +77,9 @@ export async function POST(req: NextRequest) {
         ownership_verification?: { name: string; value: string };
         ssl?: {
           status: string;
+          // TXT-based DCV (method: "txt")
+          validation_records?: Array<{ txt_name: string; txt_value: string }>;
+          // CNAME-based DCV delegation
           dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
         };
       };
@@ -87,8 +90,13 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
-      dcvCnameName = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname ?? null;
-      dcvCnameTarget = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname_target ?? null;
+      // Prefer DCV delegation CNAME; fall back to validation_records TXT
+      dcvCnameName = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname
+        ?? cfData.result.ssl?.validation_records?.[0]?.txt_name
+        ?? null;
+      dcvCnameTarget = cfData.result.ssl?.dcv_delegation_records?.[0]?.cname_target
+        ?? cfData.result.ssl?.validation_records?.[0]?.txt_value
+        ?? null;
     } else {
       console.error("CF custom hostname error:", JSON.stringify(cfData.errors));
       return NextResponse.json({ error: `Cloudflare error: ${cfData.errors?.[0]?.message ?? "unknown"}` }, { status: 500 });

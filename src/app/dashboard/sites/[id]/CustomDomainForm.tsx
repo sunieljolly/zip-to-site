@@ -8,6 +8,7 @@ interface DnsRecords {
   txt_value: string | null;
   dcv_cname_name: string | null;
   dcv_cname_target: string | null;
+  dcv_is_cname: boolean;
 }
 
 type DomainStatus = "none" | "pending" | "active" | "unknown";
@@ -54,6 +55,7 @@ export default function CustomDomainForm({
         txt_value: json.txt_value ?? null,
         dcv_cname_name: json.dcv_cname_name ?? null,
         dcv_cname_target: json.dcv_cname_target ?? null,
+        dcv_is_cname: json.dcv_is_cname ?? false,
       });
     }
   }, [siteId]);
@@ -91,6 +93,7 @@ export default function CustomDomainForm({
         txt_value: json.txt_value ?? null,
         dcv_cname_name: json.dcv_cname_name ?? null,
         dcv_cname_target: json.dcv_cname_target ?? null,
+        dcv_is_cname: json.dcv_is_cname ?? false,
       });
       setDomainStatus("pending");
     }
@@ -189,9 +192,11 @@ export default function CustomDomainForm({
           {dnsRecords.dcv_cname_name && dnsRecords.dcv_cname_target && (
             <div className="space-y-1.5">
               <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-                {dnsRecords.txt_name ? "3." : "2."} CNAME — SSL certificate validation (DCV)
+                {dnsRecords.txt_name ? "3." : "2."}{" "}
+                {dnsRecords.dcv_is_cname ? "CNAME — SSL certificate validation (DCV delegation)" : "TXT — SSL certificate validation"}
               </p>
               <div className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                <p><span style={{ color: "var(--muted)" }}>Type:</span> {dnsRecords.dcv_is_cname ? "CNAME" : "TXT"}</p>
                 <p><span style={{ color: "var(--muted)" }}>Name:</span> {dnsRecords.dcv_cname_name}</p>
                 <p><span style={{ color: "var(--muted)" }}>Value:</span> {dnsRecords.dcv_cname_target}</p>
               </div>

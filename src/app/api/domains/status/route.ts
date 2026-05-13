@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
       ownership_verification?: { name: string; value: string };
       ssl?: {
         status: string;
+        validation_records?: Array<{ txt_name: string; txt_value: string }>;
         dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
       };
     };
@@ -49,15 +50,25 @@ export async function GET(req: NextRequest) {
   const hostnameStatus = cfData.result.status;
   const sslStatus = cfData.result.ssl?.status;
   const fallbackOrigin = process.env.NEXT_PUBLIC_FALLBACK_ORIGIN ?? null;
+  const ssl = cfData.result.ssl;
+
+  // Use DCV delegation CNAME if present, otherwise fall back to TXT validation_records
+  const dcvCnameName = ssl?.dcv_delegation_records?.[0]?.cname
+    ?? ssl?.validation_records?.[0]?.txt_name
+    ?? null;
+  const dcvCnameTarget = ssl?.dcv_delegation_records?.[0]?.cname_target
+    ?? ssl?.validation_records?.[0]?.txt_value
+    ?? null;
+  const isDcvCname = !!(ssl?.dcv_delegation_records?.[0]);
 
   return NextResponse.json({
     status: hostnameStatus,
     ssl_status: sslStatus,
-    // DNS records returned on every poll so the UI can persist them
     cname_target: fallbackOrigin,
     txt_name: cfData.result.ownership_verification?.name ?? null,
     txt_value: cfData.result.ownership_verification?.value ?? null,
-    dcv_cname_name: cfData.result.ssl?.dcv_delegation_records?.[0]?.cname ?? null,
-    dcv_cname_target: cfData.result.ssl?.dcv_delegation_records?.[0]?.cname_target ?? null,
+    dcv_cname_name: dcvCnameName,
+    dcv_cname_target: dcvCnameTarget,
+    dcv_is_cname: isDcvCname,
   });
 }
