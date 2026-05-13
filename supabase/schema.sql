@@ -10,6 +10,7 @@ create table if not exists public.sites (
   name         text not null,
   subdomain    text not null unique,
   custom_domain text,
+  custom_hostname_id text,
   r2_path      text not null,
   created_at   timestamptz not null default now()
 );

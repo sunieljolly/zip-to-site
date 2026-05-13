@@ -26,16 +26,66 @@ export async function POST(req: NextRequest) {
   // Confirm site belongs to user
   const { data: site } = await supabase
     .from("sites")
-    .select("id, subdomain, r2_path")
+    .select("id, subdomain, r2_path, custom_hostname_id")
     .eq("id", siteId)
     .eq("user_id", user.id)
     .single();
 
   if (!site) return NextResponse.json({ error: "Site not found." }, { status: 404 });
 
+  // Register custom hostname with Cloudflare for SaaS (SSL + routing)
+  let hostnameId: string | null = null;
+  let cnameTarget: string | null = null;
+  let txtName: string | null = null;
+  let txtValue: string | null = null;
+
+  const zoneId = process.env.CF_ZONE_ID;
+  const apiToken = process.env.CF_API_TOKEN;
+  const fallbackOrigin = process.env.NEXT_PUBLIC_FALLBACK_ORIGIN;
+
+  if (zoneId && apiToken && fallbackOrigin) {
+    // Delete previous custom hostname if domain is being changed
+    if (site.custom_hostname_id) {
+      await fetch(
+        `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${site.custom_hostname_id}`,
+        { method: "DELETE", headers: { Authorization: `Bearer ${apiToken}` } }
+      );
+    }
+
+    const cfRes = await fetch(
+      `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          hostname: domain,
+          ssl: { method: "txt", type: "dv", settings: { min_tls_version: "1.2" } },
+        }),
+      }
+    );
+
+    const cfData = await cfRes.json() as {
+      success: boolean;
+      result?: {
+        id: string;
+        ownership_verification?: { name: string; value: string };
+      };
+    };
+
+    if (cfData.success && cfData.result) {
+      hostnameId = cfData.result.id;
+      cnameTarget = fallbackOrigin;
+      txtName = cfData.result.ownership_verification?.name ?? null;
+      txtValue = cfData.result.ownership_verification?.value ?? null;
+    }
+  }
+
   const { error } = await supabase
     .from("sites")
-    .update({ custom_domain: domain })
+    .update({ custom_domain: domain, custom_hostname_id: hostnameId })
     .eq("id", siteId)
     .eq("user_id", user.id);
 
@@ -47,5 +97,5 @@ export async function POST(req: NextRequest) {
     r2Path: site.r2_path,
   });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, cname_target: cnameTarget, txt_name: txtName, txt_value: txtValue });
 }
