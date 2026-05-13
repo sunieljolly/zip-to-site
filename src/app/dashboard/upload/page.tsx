@@ -59,57 +59,75 @@ export default function UploadPage() {
 
   return (
     <div className="max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Upload Site</h1>
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <div>
-          <label className="block text-sm font-medium mb-1">Site name</label>
-          <input
-            type="text"
-            required
-            placeholder="my-portfolio"
-            value={siteName}
-            onChange={(e) => setSiteName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-          />
-          <p className="text-xs text-gray-400 mt-1">Used as your subdomain slug.</p>
-        </div>
+      <div className="mb-8">
+        <h1 className="text-xl font-semibold tracking-tight">Upload Site</h1>
+        <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>Deploy a static site from a ZIP file</p>
+      </div>
 
-        <div
-          onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={handleDrop}
-          onClick={() => inputRef.current?.click()}
-          className={`border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-colors ${
-            dragging ? "border-black bg-gray-100" : "border-gray-300 hover:border-gray-400"
-          }`}
-        >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".zip"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-          {file ? (
-            <p className="text-sm font-medium">{file.name}</p>
-          ) : (
-            <>
-              <p className="text-sm text-gray-500">Drag & drop your ZIP file here</p>
-              <p className="text-xs text-gray-400 mt-1">or click to browse</p>
-            </>
-          )}
-        </div>
+      <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: "var(--muted)" }}>Site name</label>
+            <input
+              type="text"
+              required
+              placeholder="my-portfolio"
+              value={siteName}
+              onChange={(e) => setSiteName(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+              className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 transition-shadow"
+              style={{ borderColor: "var(--border)", background: "var(--background)" }}
+            />
+            <p className="text-xs mt-1.5" style={{ color: "var(--muted-light)" }}>Becomes your subdomain slug</p>
+          </div>
 
-        {error && <p className="text-red-500 text-sm">{error}</p>}
+          <div>
+            <label className="block text-xs font-medium mb-1.5 uppercase tracking-wide" style={{ color: "var(--muted)" }}>ZIP file</label>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => inputRef.current?.click()}
+              className="border-2 border-dashed rounded-xl p-10 text-center cursor-pointer transition-all"
+              style={{
+                borderColor: dragging ? "var(--foreground)" : "var(--border)",
+                background: dragging ? "#F0EFE9" : "var(--background)",
+              }}
+            >
+              <input
+                ref={inputRef}
+                type="file"
+                accept=".zip"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              {file ? (
+                <div>
+                  <div className="text-2xl mb-2">📦</div>
+                  <p className="text-sm font-medium">{file.name}</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-2xl mb-2">↑</div>
+                  <p className="text-sm font-medium">Drop your ZIP file here</p>
+                  <p className="text-xs mt-1" style={{ color: "var(--muted)" }}>or click to browse · max 50 MB</p>
+                </div>
+              )}
+            </div>
+          </div>
 
-        <button
-          type="submit"
-          disabled={loading || !file || !siteName.trim()}
-          className="w-full bg-black text-white rounded-lg py-2 text-sm font-medium disabled:opacity-40"
-        >
-          {loading ? "Deploying…" : "Deploy Site"}
-        </button>
-      </form>
+          {error && <p className="text-sm" style={{ color: "#C0392B" }}>{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading || !file || !siteName.trim()}
+            className="w-full rounded-lg py-2.5 text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-80"
+            style={{ background: "var(--foreground)", color: "var(--card)" }}
+          >
+            {loading ? "Deploying…" : "Deploy site"}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

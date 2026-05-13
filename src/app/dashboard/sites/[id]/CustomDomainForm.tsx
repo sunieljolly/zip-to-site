@@ -88,17 +88,19 @@ export default function CustomDomainForm({
             placeholder="yourdomain.com"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+            className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 transition-shadow"
+            style={{ borderColor: "var(--border)", background: "var(--background)" }}
           />
           {domainStatus !== "none" && <StatusBadge status={domainStatus} sslStatus={sslStatus} />}
         </div>
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm" style={{ color: "#C0392B" }}>{error}</p>}
         <button
           type="submit"
           disabled={loading || !domain.trim()}
-          className="bg-black text-white text-sm px-4 py-2 rounded-lg disabled:opacity-40"
+          className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-80"
+          style={{ background: "var(--foreground)", color: "var(--card)" }}
         >
-          {loading ? "Saving…" : "Save Domain"}
+          {loading ? "Saving…" : "Save domain"}
         </button>
       </form>
 

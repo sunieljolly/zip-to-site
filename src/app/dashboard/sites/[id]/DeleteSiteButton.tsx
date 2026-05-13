@@ -23,9 +23,10 @@ export default function DeleteSiteButton({ siteId }: { siteId: string }) {
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="bg-red-600 text-white text-sm px-4 py-2 rounded-lg disabled:opacity-50"
+      className="text-sm px-4 py-2 rounded-lg border disabled:opacity-50 transition-colors hover:bg-red-50"
+      style={{ borderColor: "#FECACA", color: "#C0392B" }}
     >
-      {loading ? "Deleting…" : "Delete Site"}
+      {loading ? "Deleting…" : "Delete site"}
     </button>
   );
 }

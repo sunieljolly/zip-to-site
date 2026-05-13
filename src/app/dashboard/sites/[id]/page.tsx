@@ -29,29 +29,36 @@ export default async function SiteDetailPage({
 
   return (
     <div className="max-w-lg">
-      <h1 className="text-2xl font-bold mb-2">{site.name}</h1>
-      <a
-        href={`https://${site.subdomain}.${domain}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-blue-600 text-sm hover:underline"
-      >
-        {site.subdomain}.{domain}
-      </a>
+      <div className="mb-8">
+        <div className="flex items-center gap-2 text-sm mb-4" style={{ color: "var(--muted)" }}>
+          <a href="/dashboard" className="hover:underline">Sites</a>
+          <span>/</span>
+          <span>{site.name}</span>
+        </div>
+        <h1 className="text-xl font-semibold tracking-tight">{site.name}</h1>
+        <a
+          href={`https://${site.subdomain}.${domain}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm hover:underline mt-1 inline-block"
+          style={{ color: "var(--muted)" }}
+        >
+          {site.subdomain}.{domain} ↗
+        </a>
+      </div>
 
-      <hr className="my-6" />
+      <div className="space-y-4">
+        <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <h2 className="text-xs font-medium uppercase tracking-wide mb-4" style={{ color: "var(--muted)" }}>Custom Domain</h2>
+          <CustomDomainForm siteId={site.id} currentDomain={site.custom_domain} hasHostname={!!site.custom_hostname_id} />
+        </div>
 
-      <section className="mb-8">
-        <h2 className="font-semibold mb-3">Custom Domain</h2>
-        <CustomDomainForm siteId={site.id} currentDomain={site.custom_domain} hasHostname={!!site.custom_hostname_id} />
-      </section>
-
-      <hr className="my-6" />
-
-      <section>
-        <h2 className="font-semibold mb-3 text-red-600">Danger Zone</h2>
-        <DeleteSiteButton siteId={site.id} />
-      </section>
+        <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+          <h2 className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: "#C0392B" }}>Danger Zone</h2>
+          <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>This will permanently delete the site and all its files.</p>
+          <DeleteSiteButton siteId={site.id} />
+        </div>
+      </div>
     </div>
   );
 }
