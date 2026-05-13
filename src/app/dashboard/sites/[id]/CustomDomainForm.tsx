@@ -117,6 +117,7 @@ export default function CustomDomainForm({
 
   const isFullyActive = domainStatus === "active" && sslStatus === "active";
   const hasDomain = domain.trim().length > 0 && (hasHostname || domainStatus !== "none");
+  const isConnected = hasHostname || domainStatus !== "none";
 
   return (
     <div className="space-y-4">
@@ -127,21 +128,29 @@ export default function CustomDomainForm({
             placeholder="yourdomain.com"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
-            className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-stone-400 transition-shadow"
-            style={{ borderColor: "var(--border)", background: "var(--background)" }}
+            readOnly={isConnected}
+            className="w-full border rounded-lg px-3 py-2.5 text-sm focus:outline-none transition-shadow"
+            style={{
+              borderColor: "var(--border)",
+              background: isConnected ? "var(--border)" : "var(--background)",
+              color: isConnected ? "var(--muted)" : "var(--foreground)",
+              cursor: isConnected ? "default" : "text",
+            }}
           />
           {domainStatus !== "none" && <StatusBadge status={domainStatus} sslStatus={sslStatus} />}
         </div>
         {error && <p className="text-sm" style={{ color: "#C0392B" }}>{error}</p>}
         <div className="flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={loading || !domain.trim()}
-            className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-80"
-            style={{ background: "var(--foreground)", color: "var(--card)" }}
-          >
-            {loading ? "Saving…" : "Save domain"}
-          </button>
+          {!isConnected && (
+            <button
+              type="submit"
+              disabled={loading || !domain.trim()}
+              className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity disabled:opacity-40 hover:opacity-80"
+              style={{ background: "var(--foreground)", color: "var(--card)" }}
+            >
+              {loading ? "Saving…" : "Save domain"}
+            </button>
+          )}
           {hasDomain && (
             <button
               type="button"
