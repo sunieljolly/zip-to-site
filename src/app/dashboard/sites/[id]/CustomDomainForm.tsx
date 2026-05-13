@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 interface DnsRecords {
   cname_target: string;
@@ -8,23 +8,59 @@ interface DnsRecords {
   txt_value: string | null;
 }
 
+type DomainStatus = "none" | "pending" | "active" | "unknown";
+
+function StatusBadge({ status, sslStatus }: { status: DomainStatus; sslStatus?: string }) {
+  if (status === "active") {
+    return <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">✓ Active</span>;
+  }
+  if (status === "pending") {
+    return <span className="inline-flex items-center gap-1 text-xs font-medium text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-full px-2 py-0.5">⏳ {sslStatus === "pending_validation" ? "Awaiting DNS verification" : "Provisioning SSL…"}</span>;
+  }
+  return null;
+}
+
 export default function CustomDomainForm({
   siteId,
   currentDomain,
+  hasHostname,
 }: {
   siteId: string;
   currentDomain: string | null;
+  hasHostname: boolean;
 }) {
   const [domain, setDomain] = useState(currentDomain ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dnsRecords, setDnsRecords] = useState<DnsRecords | null>(null);
+  const [domainStatus, setDomainStatus] = useState<DomainStatus>("none");
+  const [sslStatus, setSslStatus] = useState<string | undefined>();
+
+  const checkStatus = useCallback(async () => {
+    const res = await fetch(`/api/domains/status?siteId=${siteId}`);
+    if (!res.ok) return;
+    const json = await res.json();
+    setDomainStatus(json.status ?? "none");
+    setSslStatus(json.ssl_status);
+  }, [siteId]);
+
+  // Poll every 10s while pending
+  useEffect(() => {
+    if (currentDomain && hasHostname) checkStatus();
+  }, [currentDomain, hasHostname, checkStatus]);
+
+  useEffect(() => {
+    if (domainStatus !== "pending") return;
+    const interval = setInterval(checkStatus, 10000);
+    return () => clearInterval(interval);
+  }, [domainStatus, checkStatus]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setDnsRecords(null);
+    setDomainStatus("none");
 
     const res = await fetch("/api/domains", {
       method: "POST",
@@ -37,6 +73,7 @@ export default function CustomDomainForm({
       setError(json.error ?? "Failed to save domain.");
     } else if (json.cname_target) {
       setDnsRecords({ cname_target: json.cname_target, txt_name: json.txt_name, txt_value: json.txt_value });
+      setDomainStatus("pending");
     }
     setLoading(false);
   }
@@ -44,13 +81,16 @@ export default function CustomDomainForm({
   return (
     <div className="space-y-4">
       <form onSubmit={handleSubmit} className="space-y-3">
-        <input
-          type="text"
-          placeholder="yourdomain.com"
-          value={domain}
-          onChange={(e) => setDomain(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="yourdomain.com"
+            value={domain}
+            onChange={(e) => setDomain(e.target.value)}
+            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black"
+          />
+          {domainStatus !== "none" && <StatusBadge status={domainStatus} sslStatus={sslStatus} />}
+        </div>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <button
           type="submit"
@@ -61,7 +101,11 @@ export default function CustomDomainForm({
         </button>
       </form>
 
-      {dnsRecords && (
+      {domainStatus === "active" && (
+        <p className="text-sm text-green-700 font-medium">Your custom domain is live! Visit <a href={`https://${domain}`} target="_blank" rel="noopener noreferrer" className="underline">{domain}</a></p>
+      )}
+
+      {dnsRecords && domainStatus !== "active" && (
         <div className="bg-gray-50 border rounded-lg p-4 space-y-4 text-sm">
           <p className="font-semibold">Add these DNS records at your domain registrar:</p>
 
@@ -83,9 +127,10 @@ export default function CustomDomainForm({
             </div>
           )}
 
-          <p className="text-xs text-gray-500">SSL will be provisioned automatically once DNS propagates (usually a few minutes).</p>
+          <p className="text-xs text-gray-500">Status checks automatically every 10 seconds.</p>
         </div>
       )}
     </div>
   );
 }
+

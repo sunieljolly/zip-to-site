@@ -43,7 +43,7 @@ export default async function SiteDetailPage({
 
       <section className="mb-8">
         <h2 className="font-semibold mb-3">Custom Domain</h2>
-        <CustomDomainForm siteId={site.id} currentDomain={site.custom_domain} />
+        <CustomDomainForm siteId={site.id} currentDomain={site.custom_domain} hasHostname={!!site.custom_hostname_id} />
       </section>
 
       <hr className="my-6" />
