@@ -4,34 +4,13 @@ import { createServerSupabaseClient } from "@/lib/supabase-server";
 
 export default async function Home() {
   const supabase = await createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (user) redirect("/dashboard");
 
   return (
-    <div style={{ background: "var(--background)", color: "var(--foreground)", minHeight: "100vh" }}>
-      {/* Nav */}
-      <header style={{ borderBottom: "1px solid var(--border)" }}>
-        <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold tracking-tight text-base">ZipToSite</span>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/login"
-              className="text-sm transition-opacity hover:opacity-60"
-              style={{ color: "var(--muted)" }}
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className="text-sm font-medium rounded-lg px-4 py-2 transition-opacity hover:opacity-80"
-              style={{ background: "var(--foreground)", color: "var(--card)" }}
-            >
-              Get started
-            </Link>
-          </div>
-        </div>
-      </header>
-
+    <>
       {/* Hero */}
       <section className="max-w-4xl mx-auto px-6 py-24 text-center">
         <p
@@ -118,17 +97,7 @@ export default async function Home() {
           </Link>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer style={{ borderTop: "1px solid var(--border)" }}>
-        <div
-          className="max-w-4xl mx-auto px-6 py-6 text-xs text-center"
-          style={{ color: "var(--muted-light)" }}
-        >
-          © {new Date().getFullYear()} ZipToSite
-        </div>
-      </footer>
-    </div>
+    </>
   );
 }
 

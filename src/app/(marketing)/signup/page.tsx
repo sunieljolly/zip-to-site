@@ -31,12 +31,8 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "var(--background)" }}>
+    <div className="flex items-center justify-center p-4 py-20" style={{ background: "var(--background)" }}>
       <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold tracking-tight">ZipToSite</h1>
-          <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>Create your account</p>
-        </div>
 
         <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
           <form onSubmit={handleSubmit} className="space-y-4">
