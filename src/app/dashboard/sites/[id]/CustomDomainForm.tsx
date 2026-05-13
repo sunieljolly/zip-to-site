@@ -198,19 +198,26 @@ export default function CustomDomainForm({
             </div>
           )}
 
-          {dnsRecords.dcv_cname_name && dnsRecords.dcv_cname_target && (
-            <div className="space-y-1.5">
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-                {dnsRecords.txt_name ? "3." : "2."}{" "}
-                {dnsRecords.dcv_is_cname ? "CNAME — SSL certificate validation (DCV delegation)" : "TXT — SSL certificate validation"}
-              </p>
+          <div className="space-y-1.5">
+            <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
+              {dnsRecords.txt_name ? "3." : "2."}{" "}
+              {dnsRecords.dcv_is_cname ? "CNAME — SSL certificate validation (DCV delegation)" : "TXT — SSL certificate validation"}
+            </p>
+            {dnsRecords.dcv_cname_name && dnsRecords.dcv_cname_target ? (
               <div className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
                 <p><span style={{ color: "var(--muted)" }}>Type:</span> {dnsRecords.dcv_is_cname ? "CNAME" : "TXT"}</p>
                 <p><span style={{ color: "var(--muted)" }}>Name:</span> {dnsRecords.dcv_cname_name}</p>
                 <p><span style={{ color: "var(--muted)" }}>Value:</span> {dnsRecords.dcv_cname_target}</p>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="rounded-lg border p-3 text-xs flex items-center gap-2" style={{ background: "var(--card)", borderColor: "var(--border)", color: "var(--muted)" }}>
+                <svg className="animate-spin shrink-0" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+                Generating validation record… this usually takes a few seconds.
+              </div>
+            )}
+          </div>
 
           <p className="text-xs" style={{ color: "var(--muted-light)" }}>Status checks automatically every 10 seconds.</p>
         </div>
