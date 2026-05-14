@@ -45,15 +45,12 @@ export default function CustomDomainForm({
     const json = await res.json();
     setDomainStatus(json.status ?? "none");
     setSslStatus(json.ssl_status);
-    // Persist DNS records from every status response
-    if (json.cname_target || json.txt_name || json.ssl_validation_records?.length) {
-      setDnsRecords({
-        cname_target: json.cname_target ?? null,
-        txt_name: json.txt_name ?? null,
-        txt_value: json.txt_value ?? null,
-        ssl_validation_records: json.ssl_validation_records ?? [],
-      });
-    }
+    setDnsRecords({
+      cname_target: json.cname_target ?? null,
+      txt_name: json.txt_name ?? null,
+      txt_value: json.txt_value ?? null,
+      ssl_validation_records: json.ssl_validation_records ?? [],
+    });
   }, [siteId]);
 
   useEffect(() => {
