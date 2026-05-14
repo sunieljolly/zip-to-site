@@ -27,8 +27,12 @@ export default async function SiteDetailPage({
 
   const domain = process.env.NEXT_PUBLIC_SITE_DOMAIN;
 
+  const siteUrl = site.custom_domain
+    ? `https://${site.custom_domain}`
+    : `https://${site.subdomain}.${domain}`;
+
   return (
-    <div className="max-w-lg">
+    <div className="max-w-6xl">
       <div className="mb-8">
         <div className="flex items-center gap-2 text-sm mb-4" style={{ color: "var(--muted)" }}>
           <a href="/dashboard" className="hover:underline">Sites</a>
@@ -47,12 +51,27 @@ export default async function SiteDetailPage({
         </a>
       </div>
 
-      <div className="space-y-4">
-        <div className="rounded-2xl border overflow-hidden" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        {/* Left column — settings */}
+        <div className="space-y-4">
+          <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+            <h2 className="text-xs font-medium uppercase tracking-wide mb-4" style={{ color: "var(--muted)" }}>Custom Domain</h2>
+            <CustomDomainForm siteId={site.id} currentDomain={site.custom_domain} hasHostname={!!site.custom_hostname_id} />
+          </div>
+
+          <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+            <h2 className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: "#C0392B" }}>Danger Zone</h2>
+            <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>This will permanently delete the site and all its files.</p>
+            <DeleteSiteButton siteId={site.id} siteName={site.name} />
+          </div>
+        </div>
+
+        {/* Right column — preview */}
+        <div className="rounded-2xl border overflow-hidden sticky top-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
           <div className="flex items-center justify-between px-6 py-3 border-b" style={{ borderColor: "var(--border)" }}>
             <h2 className="text-xs font-medium uppercase tracking-wide" style={{ color: "var(--muted)" }}>Preview</h2>
             <a
-              href={site.custom_domain ? `https://${site.custom_domain}` : `https://${site.subdomain}.${domain}`}
+              href={siteUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs hover:underline"
@@ -62,22 +81,12 @@ export default async function SiteDetailPage({
             </a>
           </div>
           <iframe
-            src={site.custom_domain ? `https://${site.custom_domain}` : `https://${site.subdomain}.${domain}`}
+            src={siteUrl}
             className="w-full"
-            style={{ height: "420px", border: "none" }}
+            style={{ height: "600px", border: "none" }}
             sandbox="allow-scripts allow-same-origin"
             loading="lazy"
           />
-        </div>
-        <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-          <h2 className="text-xs font-medium uppercase tracking-wide mb-4" style={{ color: "var(--muted)" }}>Custom Domain</h2>
-          <CustomDomainForm siteId={site.id} currentDomain={site.custom_domain} hasHostname={!!site.custom_hostname_id} />
-        </div>
-
-        <div className="rounded-2xl border p-6" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
-          <h2 className="text-xs font-medium uppercase tracking-wide mb-1" style={{ color: "#C0392B" }}>Danger Zone</h2>
-          <p className="text-xs mb-4" style={{ color: "var(--muted)" }}>This will permanently delete the site and all its files.</p>
-          <DeleteSiteButton siteId={site.id} siteName={site.name} />
         </div>
       </div>
     </div>
