@@ -101,6 +101,20 @@ export async function POST(req: NextRequest) {
         name: r.txt_name,
         value: r.txt_value,
       }));
+
+      // Add a per-domain Worker route so the Worker intercepts requests for this
+      // custom hostname. Zone-wildcard routes (*.developersunny.com/*) are never
+      // triggered for CF-for-SaaS custom hostname traffic — only explicit per-
+      // hostname routes are.
+      const workerScript = process.env.CF_WORKER_SCRIPT_NAME ?? "sitetozip";
+      await fetch(
+        `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${apiToken}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ pattern: `${domain}/*`, script: workerScript }),
+        }
+      );
     } else {
       const firstError = cfData.errors?.[0];
       const msg = firstError ? `${firstError.message} (code ${firstError.code})` : `HTTP ${cfRes.status}`;
@@ -159,6 +173,24 @@ export async function DELETE(req: NextRequest) {
       `https://api.cloudflare.com/client/v4/zones/${zoneId}/custom_hostnames/${site.custom_hostname_id}`,
       { method: "DELETE", headers: { Authorization: `Bearer ${apiToken}` } }
     );
+  }
+
+  // Remove the per-domain Worker route so it no longer intercepts this hostname
+  if (zoneId && apiToken && site.custom_domain) {
+    const routesRes = await fetch(
+      `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes`,
+      { headers: { Authorization: `Bearer ${apiToken}` } }
+    );
+    if (routesRes.ok) {
+      const routesData = await routesRes.json() as { result?: Array<{ id: string; pattern: string }> };
+      const route = routesData.result?.find((r) => r.pattern === `${site.custom_domain}/*`);
+      if (route) {
+        await fetch(
+          `https://api.cloudflare.com/client/v4/zones/${zoneId}/workers/routes/${route.id}`,
+          { method: "DELETE", headers: { Authorization: `Bearer ${apiToken}` } }
+        );
+      }
+    }
   }
 
   if (site.custom_domain) {
