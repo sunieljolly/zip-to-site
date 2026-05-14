@@ -63,10 +63,10 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           hostname: domain,
-          // Use CNAME-based DCV so SSL validation only requires a single CNAME
-          // record — avoids DNS providers that overwrite duplicate TXT record
-          // names instead of appending them.
-          ssl: { method: "cname", type: "dv", certificate_authority: "lets_encrypt", settings: { min_tls_version: "1.2" } },
+          // Use http validation — Cloudflare serves the ACME HTTP challenge
+          // automatically once the domain CNAME is pointed at the fallback origin.
+          // No SSL TXT/CNAME records needed, works on all plans.
+          ssl: { method: "http", type: "dv", settings: { min_tls_version: "1.2" } },
         }),
       }
     );
@@ -101,9 +101,8 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
-      // delegated_acme method: single CNAME for SSL validation — no TXT records needed
-      const dcvRecords = cfData.result.ssl?.dcv_delegation_records ?? [];
-      sslValidationRecords = dcvRecords.map((r) => ({ name: r.cname, value: r.cname_target, type: "CNAME" }));
+      // http validation: no SSL records needed — CF handles ACME challenge automatically
+      sslValidationRecords = [];
 
       // Add a per-domain Worker route so the Worker intercepts requests for this
       // custom hostname. Zone-wildcard routes (*.developersunny.com/*) are never
