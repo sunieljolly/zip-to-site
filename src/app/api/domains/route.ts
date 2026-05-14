@@ -63,7 +63,10 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           hostname: domain,
-          ssl: { method: "txt", type: "dv", settings: { min_tls_version: "1.2" } },
+          // Use CNAME-based DCV (delegated_acme) so SSL validation only requires
+          // a single CNAME record — avoids DNS providers that overwrite duplicate
+          // TXT record names instead of appending them.
+          ssl: { method: "delegated_acme", type: "dv", settings: { min_tls_version: "1.2" } },
         }),
       }
     );
@@ -78,6 +81,8 @@ export async function POST(req: NextRequest) {
           status: string;
           validation_records?: Array<{ txt_name: string; txt_value: string }>;
           dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
+          // delegated_acme method returns this single CNAME for validation
+          acm_delegation_record?: { cname: string; cname_target: string };
         };
       };
     };
@@ -96,11 +101,9 @@ export async function POST(req: NextRequest) {
       cnameTarget = fallbackOrigin;
       txtName = cfData.result.ownership_verification?.name ?? null;
       txtValue = cfData.result.ownership_verification?.value ?? null;
-      // All TXT records needed for SSL certificate issuance
-      sslValidationRecords = (cfData.result.ssl?.validation_records ?? []).map((r) => ({
-        name: r.txt_name,
-        value: r.txt_value,
-      }));
+      // delegated_acme method: single CNAME for SSL validation — no TXT records needed
+      const dcvRecords = cfData.result.ssl?.dcv_delegation_records ?? [];
+      sslValidationRecords = dcvRecords.map((r) => ({ name: r.cname, value: r.cname_target, type: "CNAME" }));
 
       // Add a per-domain Worker route so the Worker intercepts requests for this
       // custom hostname. Zone-wildcard routes (*.developersunny.com/*) are never

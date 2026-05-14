@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
       ssl?: {
         status: string;
         validation_records?: Array<{ txt_name: string; txt_value: string }>;
+        dcv_delegation_records?: Array<{ cname: string; cname_target: string }>;
       };
     };
   };
@@ -51,10 +52,12 @@ export async function GET(req: NextRequest) {
   const fallbackOrigin = process.env.NEXT_PUBLIC_FALLBACK_ORIGIN ?? null;
   const ssl = cfData.result.ssl;
 
-  const sslValidationRecords = (ssl?.validation_records ?? []).map((r) => ({
-    name: r.txt_name,
-    value: r.txt_value,
-  }));
+  // Prefer CNAME-based DCV records (delegated_acme); fall back to TXT records
+  // for any hostnames created before the method change.
+  const dcvRecords = ssl?.dcv_delegation_records ?? [];
+  const sslValidationRecords = dcvRecords.length > 0
+    ? dcvRecords.map((r) => ({ name: r.cname, value: r.cname_target, type: "CNAME" }))
+    : (ssl?.validation_records ?? []).map((r) => ({ name: r.txt_name, value: r.txt_value, type: "TXT" }));
 
   return NextResponse.json({
     status: hostnameStatus,

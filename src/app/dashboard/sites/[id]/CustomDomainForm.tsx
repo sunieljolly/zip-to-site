@@ -6,7 +6,7 @@ interface DnsRecords {
   cname_target: string | null;
   txt_name: string | null;
   txt_value: string | null;
-  ssl_validation_records: Array<{ name: string; value: string }>;
+  ssl_validation_records: Array<{ name: string; value: string; type?: string }>;
 }
 
 type DomainStatus = "none" | "pending" | "active" | "unknown";
@@ -194,30 +194,17 @@ export default function CustomDomainForm({
 
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "var(--muted)" }}>
-              {dnsRecords.txt_name ? "3." : "2."} TXT — SSL certificate validation
-              {dnsRecords.ssl_validation_records.length > 1 && (
-                <span className="normal-case ml-1 font-normal">(add all {dnsRecords.ssl_validation_records.length})</span>
-              )}
+              {dnsRecords.txt_name ? "3." : "2."} {dnsRecords.ssl_validation_records[0]?.type === "CNAME" ? "CNAME" : "TXT"} — SSL certificate validation
             </p>
             {dnsRecords.ssl_validation_records.length > 0 ? (() => {
-              // Group records by name — same name can have multiple values
-              const grouped = dnsRecords.ssl_validation_records.reduce<Record<string, string[]>>(
-                (acc, rec) => { (acc[rec.name] ??= []).push(rec.value); return acc; },
-                {}
-              );
+              const isCname = dnsRecords.ssl_validation_records[0]?.type === "CNAME";
               return (
                 <div className="space-y-2">
-                  {Object.entries(grouped).map(([name, values]) => (
-                    <div key={name} className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                  {dnsRecords.ssl_validation_records.map(({ name, value }, i) => (
+                    <div key={i} className="rounded-lg border p-3 font-mono text-xs space-y-1 break-all" style={{ background: "var(--card)", borderColor: "var(--border)" }}>
+                      <p><span style={{ color: "var(--muted)" }}>Type:</span> {isCname ? "CNAME" : "TXT"}</p>
                       <p><span style={{ color: "var(--muted)" }}>Name:</span> {name}</p>
-                      {values.map((v, i) => (
-                        <p key={i}><span style={{ color: "var(--muted)" }}>Value{values.length > 1 ? ` ${i + 1}` : ""}:</span> {v}</p>
-                      ))}
-                      {values.length > 1 && (
-                        <p className="pt-1 not-italic" style={{ color: "var(--muted-light)", fontFamily: "inherit", fontSize: "0.65rem" }}>
-                          Add {values.length} separate TXT records with this name, one per value.
-                        </p>
-                      )}
+                      <p><span style={{ color: "var(--muted)" }}>Value:</span> {value}</p>
                     </div>
                   ))}
                 </div>
