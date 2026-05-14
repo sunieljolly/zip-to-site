@@ -63,10 +63,10 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           hostname: domain,
-          // Use CNAME-based DCV (delegated_acme) so SSL validation only requires
-          // a single CNAME record — avoids DNS providers that overwrite duplicate
-          // TXT record names instead of appending them.
-          ssl: { method: "delegated_acme", type: "dv", settings: { min_tls_version: "1.2" } },
+          // Use CNAME-based DCV so SSL validation only requires a single CNAME
+          // record — avoids DNS providers that overwrite duplicate TXT record
+          // names instead of appending them.
+          ssl: { method: "cname", type: "dv", settings: { min_tls_version: "1.2" } },
         }),
       }
     );
