@@ -13,7 +13,11 @@
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
-    const hostname = url.hostname; // e.g. my-site.yourdomain.com or custom.com
+    // For CF for SaaS custom hostnames the request is routed through the zone's
+    // fallback origin, so request.url.hostname may be the fallback origin subdomain
+    // rather than the original custom domain.  The Host header always contains the
+    // original hostname the visitor used, so prefer it.
+    const hostname = request.headers.get("host") ?? url.hostname;
 
     // --- Resolve site record from KV ---
     let siteRecord = null;
