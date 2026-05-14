@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
           // Use CNAME-based DCV so SSL validation only requires a single CNAME
           // record — avoids DNS providers that overwrite duplicate TXT record
           // names instead of appending them.
-          ssl: { method: "cname", type: "dv", settings: { min_tls_version: "1.2" } },
+          ssl: { method: "cname", type: "dv", certificate_authority: "lets_encrypt", settings: { min_tls_version: "1.2" } },
         }),
       }
     );
